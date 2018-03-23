@@ -464,7 +464,13 @@ impl Toolchain {
             ).map_err(InstallError::Download)?;
         }
 
-        fs::rename(tmpdir.into_path(), dest).map_err(InstallError::Move)?;
+        // `fs::rename` will fail when moving across partitions. try to copy in that case.
+        fs::rename(tmpdir.path(), &dest)
+            .or_else(|_| {
+                fs::copy(tmpdir.into_path(), dest)?;
+                Ok(())
+            })
+            .map_err(InstallError::Move)?;
 
         Ok(())
     }
